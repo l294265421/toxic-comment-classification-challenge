@@ -1,4 +1,4 @@
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import ExtraTreesClassifier
 from data.raw_data import *
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import roc_auc_score
@@ -23,7 +23,7 @@ aucs = []
 for label in ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']:
     y = train_df[label]
     X_train, X_validation, y_train, y_validation = train_test_split(X, y, test_size=0.4, random_state=1234)
-    model = LogisticRegression()
+    model = ExtraTreesClassifier()
     model.fit(X_train, y_train)
     aucs.append(roc_auc_score(y_validation, model.predict_proba(X_validation)[:, 1]))
     test_df[label] = model.predict_proba(X_test)[:, 1]
@@ -31,4 +31,4 @@ print(aucs)
 print('mean:{m}'.format(m=(sum(aucs)/len(aucs))))
 
 test_df.drop('comment_text', axis=1, inplace=True)
-test_df.to_csv(base_dir + 'logistic.csv', index=False)
+test_df.to_csv(base_dir + 'extratree.csv', index=False)

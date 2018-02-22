@@ -12,6 +12,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
 from scipy.sparse import hstack
+from xgboost import XGBClassifier
 
 class_names = ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']
 
@@ -53,14 +54,11 @@ losses = []
 predictions = {'id': test_df['id']}
 for class_name in class_names:
     train_target = train_df[class_name]
-    classifier = LogisticRegression()
+    classifier = XGBClassifier(max_depth=8, n_estimators=99, n_jobs=8)
 
     # cv_loss = np.mean(cross_val_score(classifier, train_features, train_target, cv=3, scoring='roc_auc'))
     # losses.append(cv_loss)
     # print('CV score for class {} is {}'.format(class_name, cv_loss))
-
-    param_grid = [{'penalty':['l1'], 'C':[1,2,3]}, {'penalty':['l2'], 'C':[1,2,3], 'solver':['newton-cg', 'lbfgs',' liblinear', 'sag']}]
-    classifier = GridSearchCV(estimator=classifier, param_grid=param_grid, n_jobs=2, cv=3)
 
     classifier.fit(train_features, train_target)
     predictions[class_name] = classifier.predict_proba(test_features)[:, 1]
@@ -68,4 +66,4 @@ for class_name in class_names:
 # print('Total CV score is {}'.format(np.mean(losses)))
 
 submission = pd.DataFrame.from_dict(predictions)
-submission.to_csv(base_dir + 'lr_words_and_char_ngrams.csv', index=False)
+submission.to_csv(base_dir + 'xgboost.csv', index=False)

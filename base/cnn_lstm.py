@@ -58,7 +58,7 @@ def msgProcessing(raw_msg):
         if len(i) >= 2:
             words2.append(i)
     stops = set(stopwords.words('english'))
-    m_w = " ".join([w for w in words2])
+    m_w = " ".join([w for w in words2 if w not in stops])
     return (" ".join(lemmatize_all(m_w)))
 
 

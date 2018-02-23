@@ -16,14 +16,10 @@ maxlen = 100
 
 train = train_df
 test = test_df
-print(train.head(10))
 list_sentences_train = train["comment_text"].fillna("unknown").values
 list_classes = ["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]
 y = train[list_classes].values
 list_sentences_test = test["comment_text"].fillna("unknown").values
-
-print(list_sentences_train[0])
-y[0]
 
 tokenizer = text.Tokenizer(num_words=max_features)
 tokenizer.fit_on_texts(list(list_sentences_train))
@@ -56,12 +52,7 @@ model.summary()
 
 from sklearn.model_selection import train_test_split
 
-print('Positive Labels ')
-any_category_positive = np.sum(y,1)
-print(pd.value_counts(any_category_positive))
-X_t_train, X_t_test, y_train, y_test = train_test_split(X_t, y,
-                                                        test_size = 0.10,
-                                                        )
+X_t_train, X_t_test, y_train, y_test = train_test_split(X_t, y, test_size = 0.10)
 print('Training:', X_t_train.shape)
 print('Testing:', X_t_test.shape)
 
@@ -83,26 +74,6 @@ model.fit(X_t_train, y_train,
 model.save('Whole_model.h5')
 model.load_weights(file_path)
 y_test = model.predict(X_te)
-sample_submission = pd.read_csv("../input/sample_submission.csv")
+sample_submission = pd.read_csv(base_dir + "sample_submission.csv")
 sample_submission[list_classes] = y_test
-sample_submission.to_csv("predictions.csv", index=False)
-
-#For fun not for testing purpose!!
-test=["This is your last warning. You will be blocked from editing the next time you vandalize a page, as you did with this edit to Geb.  |Parlez ici "]
-
-tokenizer.fit_on_texts(list(test))
-# train data
-test_token = tokenizer.texts_to_sequences(test)
-test_2 = sequence.pad_sequences(test_token, maxlen=maxlen)
-
-np.argmax(model.predict(test_2))
-
-model.predict(test_2)
-
-pred=pd.read_csv('predictions.csv')
-pred.head()
-
-
-
-
-
+sample_submission.to_csv(base_dir + "cnn_gru.csv", index=False)

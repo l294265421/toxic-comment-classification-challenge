@@ -12,6 +12,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
 from scipy.sparse import hstack
+from nltk import pos_tag, word_tokenize
+from nltk.stem import WordNetLemmatizer
 
 class_names = ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']
 
@@ -19,13 +21,32 @@ train_text = train_df['comment_text']
 test_text = test_df['comment_text']
 all_text = pd.concat([train_text, test_text])
 
+def lemmatize_all(sentence):
+    wnl = WordNetLemmatizer()
+    for word, tag in pos_tag(word_tokenize(sentence.lower())):
+        if tag.startswith("NN"):
+            yield wnl.lemmatize(word, pos='n')
+        elif tag.startswith('VB'):
+            yield wnl.lemmatize(word, pos='v')
+        elif tag.startswith('JJ'):
+            yield wnl.lemmatize(word, pos='a')
+        elif tag.startswith('R'):
+            yield wnl.lemmatize(word, pos='r')
+        else:
+            yield word
+
 english_stemmer = SnowballStemmer('english')
 class StemmedTfidfVectorizer(TfidfVectorizer):
     def build_analyzer(self):
         analyzer = super(StemmedTfidfVectorizer, self).build_analyzer()
         return lambda doc: (english_stemmer.stem(w) for w in analyzer(doc))
 
-word_vectorizer = StemmedTfidfVectorizer(
+class LemmatizeTfidfVectorizer(TfidfVectorizer):
+    def build_analyzer(self):
+        # analyzer = super(LemmatizeTfidfVectorizer, self).build_analyzer()
+        return lambda doc: (english_stemmer.stem(w) for w in lemmatize_all(doc))
+
+word_vectorizer = LemmatizeTfidfVectorizer(
     sublinear_tf=True,
     strip_accents='unicode',
     analyzer='word',
@@ -59,8 +80,8 @@ for class_name in class_names:
     # losses.append(cv_loss)
     # print('CV score for class {} is {}'.format(class_name, cv_loss))
 
-    param_grid = [{'penalty':['l1'], 'C':[1,2,3]}, {'penalty':['l2'], 'C':[1,2,3], 'solver':['newton-cg', 'lbfgs',' liblinear', 'sag']}]
-    classifier = GridSearchCV(estimator=classifier, param_grid=param_grid, n_jobs=2, cv=3)
+    # param_grid = [{'penalty':['l1'], 'C':[1,2,3]}, {'penalty':['l2'], 'C':[1,2,3], 'solver':['newton-cg', 'lbfgs',' liblinear', 'sag']}]
+    # classifier = GridSearchCV(estimator=classifier, param_grid=param_grid, n_jobs=2, cv=3)
 
     classifier.fit(train_features, train_target)
     predictions[class_name] = classifier.predict_proba(test_features)[:, 1]

@@ -1,21 +1,7 @@
 '''https://www.kaggle.com/rohitanil/keras-cnn-lstm-lb-0-059/code'''
 
-# This Python 3 environment comes with many helpful analytics libraries installed
-# It is defined by the kaggle/python docker image: https://github.com/kaggle/docker-python
-# For example, here's several helpful packages to load in
-
 import numpy as np  # linear algebra
 import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
-
-# Input data files are available in the "../input/" directory.
-# For example, running this (by clicking run or pressing Shift+Enter) will list the files in the input directory
-
-# Any results you write to the current directory are saved as output.
-
-
-# coding: utf-8
-
-# In[1]:
 
 
 import pandas as pd
@@ -41,8 +27,6 @@ from keras.preprocessing.sequence import pad_sequences
 
 from data.raw_data import *
 
-# In[30]:
-
 
 def lemmatize_all(sentence):
     wnl = WordNetLemmatizer()
@@ -55,10 +39,8 @@ def lemmatize_all(sentence):
             yield wnl.lemmatize(word, pos='a')
         elif tag.startswith('R'):
             yield wnl.lemmatize(word, pos='r')
-
         else:
             yield word
-
 
 def msgProcessing(raw_msg):
     m_w = []
@@ -94,10 +76,6 @@ def helperFunction(df):
     print("Data Preprocessing Ends!!!")
     return X
 
-
-# In[31]:
-
-
 def embedding(train, test):
     tokenizer = Tokenizer(num_words=20000)
     tokenizer.fit_on_texts(train)
@@ -108,50 +86,21 @@ def embedding(train, test):
     testdata = pad_sequences(testsequences, maxlen=100)
     return traindata, testdata, t
 
-
-# In[32]:
-
-
 def getTarget(y):
     ytrain = y[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]].values
     return ytrain
 
-
-# In[5]:
-
-
 df = train_df
-
-# In[33]:
-
-
 X = helperFunction(df)
-
-# In[34]:
-
 
 df2 = test_df
 df2['comment_text'].fillna('Missing', inplace=True)
-
-# In[35]:
-
-
 X2 = helperFunction(df2)
-
-# In[36]:
-
 
 xtrain, xtest, vocab_size = embedding(X, X2)
 
-# In[37]:
-
-
 classes = ["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]
 ytrain = getTarget(df[classes])
-
-
-# In[44]:
-
 
 def buildModel(xtrain, ytrain):
     batch_size = 1000
@@ -167,7 +116,7 @@ def buildModel(xtrain, ytrain):
     model.add(Conv1D(128, kernel_size=3, padding='same', activation='relu'))
     model.add(MaxPooling1D(pool_size=3))
     model.add(Dropout(0.4))
-    model.add(GRU(50, return_sequences=True))
+    model.add(LSTM(50, return_sequences=True))
     model.add(Dropout(0.25))
     model.add(Flatten())
     model.add(Dense(128, activation='relu'))
@@ -179,23 +128,11 @@ def buildModel(xtrain, ytrain):
     pred = model.predict(xtest)
     return pred
 
-
-# In[45]:
-
-
 pred = buildModel(xtrain, ytrain)
-
-
-# In[48]:
-
 
 def saveCSV(ytest):
     sample_submission = pd.read_csv(base_dir + "sample_submission.csv")
     sample_submission[classes] = ytest
     sample_submission.to_csv(base_dir + "cnn_lstm.csv", index=False)
-
-
-# In[49]:
-
 
 saveCSV(pred)

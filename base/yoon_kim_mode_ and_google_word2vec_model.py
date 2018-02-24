@@ -18,12 +18,9 @@ from nltk.corpus import stopwords
 import re
 import codecs
 import matplotlib.pyplot as plt
-# Input data files are available in the "../input/" directory.
-# For example, running this (by clicking run or pressing Shift+Enter) will list the files in the input directory
 from data.raw_data import *
 
 stop_words = set(stopwords.words('english'))
-# Any results you write to the current directory are saved as output.
 
 EMBEDDING_DIM = 300 # how big is each word vector
 MAX_VOCAB_SIZE = 200000 # how many unique words to use (i.e num rows in embedding vector)
@@ -33,18 +30,16 @@ MAX_SEQUENCE_LENGTH = 200 # max number of words in a comment to use
 batch_size = 256
 num_epochs = 2
 
-train_comments = train_df
+train_comments = train_df[:5]
 train_comments.columns=['id', 'comment_text', 'toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']
 print("num train: ", train_comments.shape[0])
-train_comments.head()
 
 label_names = ["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]
 y_train = train_comments[label_names].values
 
-test_comments = test_df
+test_comments = test_df[:5]
 test_comments.columns=['id', 'comment_text']
 print("num test: ", test_comments.shape[0])
-test_comments.head()
 
 def standardize_text(df, text_field):
     df[text_field] = df[text_field].str.replace(r"http\S+", "")
@@ -57,32 +52,24 @@ def standardize_text(df, text_field):
 
 train_comments.fillna('_NA_')
 train_comments = standardize_text(train_comments, "comment_text")
-train_comments.to_csv("train_clean_data.csv")
-train_comments.head()
+train_comments.to_csv(base_dir + "train_clean_data.csv")
 
 test_comments.fillna('_NA_')
 test_comments = standardize_text(test_comments, "comment_text")
-test_comments.to_csv("test_clean_data.csv")
-test_comments.head()
+test_comments.to_csv(base_dir + "test_clean_data.csv")
 
 tokenizer = RegexpTokenizer(r'\w+')
-clean_train_comments = pd.read_csv("train_clean_data.csv")
+clean_train_comments = pd.read_csv(base_dir + "train_clean_data.csv")
 clean_train_comments['comment_text'] = clean_train_comments['comment_text'].astype('str')
-clean_train_comments.dtypes
 clean_train_comments["tokens"] = clean_train_comments["comment_text"].apply(tokenizer.tokenize)
 # delete Stop Words
 clean_train_comments["tokens"] = clean_train_comments["tokens"].apply(
     lambda vec: [word for word in vec if word not in stop_words])
 
-clean_train_comments.head()
-
-clean_test_comments = pd.read_csv("test_clean_data.csv")
+clean_test_comments = pd.read_csv(base_dir + "test_clean_data.csv")
 clean_test_comments['comment_text'] = clean_test_comments['comment_text'].astype('str')
-clean_test_comments.dtypes
 clean_test_comments["tokens"] = clean_test_comments["comment_text"].apply(tokenizer.tokenize)
 clean_test_comments["tokens"] = clean_test_comments["tokens"].apply(lambda vec: [word for word in vec if word not in stop_words])
-
-clean_test_comments.head()
 
 all_training_words = [word for tokens in clean_train_comments["tokens"] for word in tokens]
 training_sentence_lengths = [len(tokens) for tokens in clean_train_comments["tokens"]]
@@ -98,26 +85,6 @@ print("Max sentence length is %s" % max(test_sentence_lengths))
 
 word2vec_path = base_dir + "GoogleNews-vectors-negative300.bin.gz"
 word2vec = gensim.models.KeyedVectors.load_word2vec_format(word2vec_path, binary=True)
-
-def get_average_word2vec(tokens_list, vector, generate_missing=False, k=300):
-    if len(tokens_list)<1:
-        return np.zeros(k)
-    if generate_missing:
-        vectorized = [vector[word] if word in vector else np.random.rand(k) for word in tokens_list]
-    else:
-        vectorized = [vector[word] if word in vector else np.zeros(k) for word in tokens_list]
-    length = len(vectorized)
-    summed = np.sum(vectorized, axis=0)
-    averaged = np.divide(summed, length)
-    return averaged
-
-def get_word2vec_embeddings(vectors, clean_comments, generate_missing=False):
-    embeddings = clean_comments['tokens'].apply(lambda x: get_average_word2vec(x, vectors,
-                                                                                generate_missing=generate_missing))
-    return list(embeddings)
-
-training_embeddings = get_word2vec_embeddings(word2vec, clean_train_comments, generate_missing=True)
-# test_embeddings = get_word2vec_embeddings(word2vec, clean_test_comments, generate_missing=True)
 
 tokenizer = Tokenizer(num_words=MAX_VOCAB_SIZE, lower=True, char_level=False)
 tokenizer.fit_on_texts(clean_train_comments["comment_text"].tolist())
@@ -135,7 +102,6 @@ print(train_embedding_weights.shape)
 
 test_sequences = tokenizer.texts_to_sequences(clean_test_comments["comment_text"].tolist())
 test_cnn_data = pad_sequences(test_sequences, maxlen=MAX_SEQUENCE_LENGTH)
-
 
 def ConvNet(embeddings, max_sequence_length, num_words, embedding_dim, labels_index, trainable=False, extra_conv=True):
     embedding_layer = Embedding(num_words,
@@ -201,24 +167,3 @@ submission_df = pd.DataFrame(columns=['id'] + label_names)
 submission_df['id'] = test_comments['id'].values
 submission_df[label_names] = y_test
 submission_df.to_csv(base_dir + "cnn_submission.csv", index=False)
-
-#generate plots
-plt.figure()
-plt.plot(hist.history['loss'], lw=2.0, color='b', label='train')
-plt.plot(hist.history['val_loss'], lw=2.0, color='r', label='val')
-plt.title('CNN sentiment')
-plt.xlabel('Epochs')
-plt.ylabel('Cross-Entropy Loss')
-plt.legend(loc='upper right')
-plt.show()
-
-plt.figure()
-plt.plot(hist.history['acc'], lw=2.0, color='b', label='train')
-plt.plot(hist.history['val_acc'], lw=2.0, color='r', label='val')
-plt.title('CNN sentiment')
-plt.xlabel('Epochs')
-plt.ylabel('Accuracy')
-plt.legend(loc='upper left')
-plt.show()
-
-

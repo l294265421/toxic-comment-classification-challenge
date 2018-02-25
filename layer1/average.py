@@ -1,7 +1,7 @@
 from data.raw_data import *
 import pandas as pd
 
-sub_files = ['lr_words_and_char_ngrams.csv', 'pooled_gru.csv', 'pooled_gru_9823.csv', 'average.csv']
+sub_files = ['pooled_gru_9823.csv', 'average.csv', 'average2.csv']
 
 sub_dfs = [pd.read_csv(base_dir + sub_file) for sub_file in sub_files]
 
@@ -22,4 +22,4 @@ for i in range(1, len(sub_dfs)):
 for label in labels:
     sub[label] = sub[label] / len(sub_dfs)
 
-sub.to_csv(base_dir + 'average2.csv', index=False)
+sub.to_csv(base_dir + 'average3.csv', index=False)

@@ -26,8 +26,8 @@ os.environ['OMP_NUM_THREADS'] = '4'
 
 EMBEDDING_FILE = base_dir + 'glove.42B.300d.txt'
 
-train = train_df[:5]
-test = test_df[:5]
+train = train_df
+test = test_df
 submission = submission
 
 X_train = train["comment_text"].fillna("fillna").values
@@ -45,17 +45,16 @@ X_test = tokenizer.texts_to_sequences(X_test)
 x_train = sequence.pad_sequences(X_train, maxlen=maxlen)
 x_test = sequence.pad_sequences(X_test, maxlen=maxlen)
 
-
 def get_coefs(word, *arr): return word, np.asarray(arr, dtype='float32')
 
+word_index = tokenizer.word_index
 
-embeddings_index = dict(get_coefs(*o.strip().split()) for o in open(EMBEDDING_FILE, encoding='utf-8'))
+embeddings_index = dict(get_coefs(*o.strip().split()) for o in open(EMBEDDING_FILE, encoding='utf-8') if o.strip().split()[0] in word_index)
 
 all_embs = np.stack(embeddings_index.values())
 emb_mean, emb_std = all_embs.mean(), all_embs.std()
 
-word_index = tokenizer.word_index
-nb_words = min(max_features, len(word_index))
+nb_words = min(max_features, len(word_index) + 1)
 embedding_matrix = np.random.normal(emb_mean, emb_std, (nb_words, embed_size))
 for word, i in word_index.items():
     if i >= max_features: continue
@@ -79,7 +78,7 @@ class RocAucEvaluation(Callback):
 
 def get_model():
     inp = Input(shape=(maxlen,))
-    x = Embedding(max_features, embed_size, weights=[embedding_matrix])(inp)
+    x = Embedding(nb_words, embed_size, weights=[embedding_matrix])(inp)
     x = SpatialDropout1D(0.2)(x)
     x = Bidirectional(GRU(80, return_sequences=True))(x)
     avg_pool = GlobalAveragePooling1D()(x)

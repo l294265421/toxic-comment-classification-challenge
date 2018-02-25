@@ -30,14 +30,14 @@ MAX_SEQUENCE_LENGTH = 200 # max number of words in a comment to use
 batch_size = 256
 num_epochs = 2
 
-train_comments = train_df[:5]
+train_comments = train_df
 train_comments.columns=['id', 'comment_text', 'toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']
 print("num train: ", train_comments.shape[0])
 
 label_names = ["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]
 y_train = train_comments[label_names].values
 
-test_comments = test_df[:5]
+test_comments = test_df
 test_comments.columns=['id', 'comment_text']
 print("num test: ", test_comments.shape[0])
 

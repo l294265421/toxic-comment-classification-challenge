@@ -4,8 +4,27 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
+from nltk.stem import SnowballStemmer
+from nltk import pos_tag, word_tokenize
+from nltk.stem import WordNetLemmatizer
 
-v = TfidfVectorizer()
+english_stemmer = SnowballStemmer('english')
+class StemmedTfidfVectorizer(TfidfVectorizer):
+    def build_analyzer(self):
+        analyzer = super(StemmedTfidfVectorizer, self).build_analyzer()
+        return lambda doc: (english_stemmer.stem(w) for w in analyzer(doc))
+
+
+def lemmatize_and_stem_all(sentence):
+    wnl = WordNetLemmatizer()
+    for word in word_tokenize(sentence):
+        yield wnl.lemmatize(word)
+
+class LemmatizeTfidfVectorizer(TfidfVectorizer):
+    def build_analyzer(self):
+        return lambda doc: lemmatize_and_stem_all(doc)
+
+v = StemmedTfidfVectorizer(stop_words='english', ngram_range=(1, 1), max_df=0.5, max_features=30000)
 
 X = v.fit_transform(train_df['comment_text'])
 X_test = v.transform(test_df['comment_text'])

@@ -1,7 +1,19 @@
 from data.raw_data import *
 import pandas as pd
 
-sub_files = ['lr_words_and_char_ngrams.csv', 'pooled_gru.csv', 'pooled_gru_9823.csv', 'average.csv', 'bidirectional_lstm.csv', 'cnn_gru.csv']
+base_dir = base_dir + 'average\\'
+sub_files = [
+'bidirectional_lstm.csv',
+ 'cnn_gru.csv',
+ 'cnn_submission.csv',
+ 'lr_words_and_char_ngrams.csv',
+ 'pooled_gru.csv',
+ 'pooled_gru_9823.csv',
+ 'pooled_gru_trainable.csv',
+ 'pooled_gru_trainable2(1).csv',
+ 'pooled_gru_trainable2.csv',
+ 'pooled_lstm_trainable.csv'
+]
 
 sub_dfs = [pd.read_csv(base_dir + sub_file) for sub_file in sub_files]
 

@@ -4,8 +4,25 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
+from nltk.stem import SnowballStemmer
+from nltk import pos_tag, word_tokenize
+from nltk.stem import WordNetLemmatizer
 
-v = TfidfVectorizer()
+english_stemmer = SnowballStemmer('english')
+def normalize_word(word):
+    if word.isdigit():
+        return 'num'
+    elif len(word) > 15:
+        return 'execeptionword'
+    else:
+        return english_stemmer.stem(word)
+
+class StemmedTfidfVectorizer(TfidfVectorizer):
+    def build_analyzer(self):
+        analyzer = super(StemmedTfidfVectorizer, self).build_analyzer()
+        return lambda doc: (normalize_word(w) for w in analyzer(doc))
+
+v = StemmedTfidfVectorizer(stop_words='english', ngram_range=(1, 1), max_features=15000)
 
 X = v.fit_transform(train_df['comment_text'])
 X_test = v.transform(test_df['comment_text'])

@@ -8,12 +8,20 @@ from nltk.stem import SnowballStemmer
 from nltk.stem import PorterStemmer
 
 english_stemmer = SnowballStemmer('english')
+def normalize_word(word):
+    if word.isdigit():
+        return 'num'
+    elif len(word) > 15:
+        return 'execeptionword'
+    else:
+        return english_stemmer.stem(word)
+
 class StemmedTfidfVectorizer(TfidfVectorizer):
     def build_analyzer(self):
         analyzer = super(StemmedTfidfVectorizer, self).build_analyzer()
-        return lambda doc: (english_stemmer.stem(w) for w in analyzer(doc))
+        return lambda doc: (normalize_word(w) for w in analyzer(doc))
 
-v = StemmedTfidfVectorizer(stop_words='english')
+v = StemmedTfidfVectorizer(stop_words='english', ngram_range=(1, 3), max_features=30000)
 
 X = v.fit_transform(train_df['comment_text'])
 print(str(len(v.vocabulary_)))

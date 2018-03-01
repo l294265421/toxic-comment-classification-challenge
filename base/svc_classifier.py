@@ -22,7 +22,7 @@ class StemmedTfidfVectorizer(TfidfVectorizer):
         analyzer = super(StemmedTfidfVectorizer, self).build_analyzer()
         return lambda doc: (normalize_word(w) for w in analyzer(doc))
 
-v = StemmedTfidfVectorizer(stop_words='english', ngram_range=(1, 1), max_features=15000)
+v = StemmedTfidfVectorizer(stop_words='english', ngram_range=(1, 3), max_features=15000)
 
 X = v.fit_transform(train_df['comment_text'])
 X_test = v.transform(test_df['comment_text'])

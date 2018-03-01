@@ -37,8 +37,9 @@ X_test = v.transform(test_df['comment_text'])
 aucs = []
 for label in ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']:
     y = train_df[label]
-    X_train, X_validation, y_train, y_validation = train_test_split(X, y, test_size=0.4, random_state=1234)
-    model = XGBClassifier(n_estimators=400,n_jobs=4, learning_rate=0.1, booster='gbtree', random_state=1234, max_depth=6)
+    X_train, X_validation, y_train, y_validation = train_test_split(X, y, test_size=0.05, random_state=1234)
+    model = XGBClassifier(n_estimators=400,n_jobs=4, learning_rate=0.1, booster='gbtree', random_state=1234,
+                          max_depth=6, subsample=0.8, colsample_bytree=0.8)
     model.fit(X_train, y_train)
     aucs.append(roc_auc_score(y_validation, model.predict_proba(X_validation)[:, 1]))
     test_df[label] = model.predict_proba(X_test)[:, 1]
@@ -46,4 +47,4 @@ print(aucs)
 print('mean:{m}'.format(m=(sum(aucs)/len(aucs))))
 
 test_df.drop('comment_text', axis=1, inplace=True)
-submission.to_csv(base_dir + 'xgboost.csv', index=False)
+submission.to_csv(base_dir + 'xgboost4.csv', index=False)

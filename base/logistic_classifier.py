@@ -6,6 +6,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 from nltk.stem import SnowballStemmer
 from nltk.stem import PorterStemmer
+from nltk import pos_tag, word_tokenize
+from scipy.sparse import hstack
 
 english_stemmer = SnowballStemmer('english')
 def normalize_word(word):
@@ -21,16 +23,18 @@ class StemmedTfidfVectorizer(TfidfVectorizer):
         analyzer = super(StemmedTfidfVectorizer, self).build_analyzer()
         return lambda doc: (normalize_word(w) for w in analyzer(doc))
 
-v = StemmedTfidfVectorizer(stop_words='english', ngram_range=(1, 3), max_features=30000)
+v = StemmedTfidfVectorizer(stop_words='english', tokenizer=word_tokenize, ngram_range=(1, 3), max_features=15000)
 
 X = v.fit_transform(train_df['comment_text'])
-print(str(len(v.vocabulary_)))
 X_test = v.transform(test_df['comment_text'])
+
+X = hstack([X, train_statistics])
+X_test = hstack([X_test, test_statistics])
 
 aucs = []
 for label in ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']:
     y = train_df[label]
-    X_train, X_validation, y_train, y_validation = train_test_split(X, y, test_size=0.4, random_state=1234)
+    X_train, X_validation, y_train, y_validation = train_test_split(X, y, test_size=0.05, random_state=1234)
     model = LogisticRegression()
     model.fit(X_train, y_train)
     aucs.append(roc_auc_score(y_validation, model.predict_proba(X_validation)[:, 1]))

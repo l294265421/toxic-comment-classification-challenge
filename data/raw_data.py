@@ -1,5 +1,5 @@
 import pandas as pd
-from nltk import word_tokenize
+import os
 
 base_dir = r'D:\document\program\ml\machine-learning-databases\kaggle\Toxic Comment Classification Challenge\\'
 
@@ -11,5 +11,7 @@ train_df = pd.read_csv(base_dir + train_file_name)
 test_df = pd.read_csv(base_dir + test_file_name)
 submission = pd.read_csv(base_dir + submission_file_name)
 
-train_df['word_num'] = train_df.apply(lambda row : len(word_tokenize(row['comment_text'])), axis=1)
-test_df['word_num'] = test_df.apply(lambda row : len(word_tokenize(row['comment_text'])), axis=1)
+statistics_columns = ['capitals', 'caps_vs_length']
+if os.path.exists(base_dir + 'train_statistics.csv'):
+    train_statistics = pd.read_csv(base_dir + 'train_statistics.csv')[statistics_columns].fillna(0).values
+    test_statistics = pd.read_csv(base_dir + 'test_statistics.csv')[statistics_columns].fillna(0).values

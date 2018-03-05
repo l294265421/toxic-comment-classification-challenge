@@ -47,4 +47,4 @@ print(aucs)
 print('mean:{m}'.format(m=(sum(aucs)/len(aucs))))
 
 test_df.drop('comment_text', axis=1, inplace=True)
-submission.to_csv(base_dir + 'xgboost4.csv', index=False)
+test_df.to_csv(base_dir + 'xgboost4.csv', index=False)

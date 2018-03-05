@@ -12,6 +12,10 @@ from keras.layers import GRU, LSTM, Bidirectional, GlobalAveragePooling1D, Globa
 from keras.preprocessing import text, sequence
 from keras.callbacks import Callback
 from keras.callbacks import EarlyStopping
+from keras.layers import Dense, Dropout, Activation, Flatten
+from keras.models import Sequential
+from keras.layers import Convolution1D, MaxPooling1D
+from keras.layers.convolutional import Conv1D
 
 import warnings
 
@@ -76,35 +80,41 @@ class RocAucEvaluation(Callback):
             score = roc_auc_score(self.y_val, y_pred)
             print("\n ROC-AUC - epoch: %d - score: %.6f \n" % (epoch + 1, score))
 
-
 def get_model():
-    inp = Input(shape=(maxlen,))
-    x = Embedding(nb_words, embed_size, weights=[embedding_matrix], trainable=True)(inp)
-    # x = SpatialDropout1D(0.2)(x)
-    x = Bidirectional(GRU(80, return_sequences=True))(x)
-    avg_pool = GlobalAveragePooling1D()(x)
-    max_pool = GlobalMaxPooling1D()(x)
-    conc = concatenate([avg_pool, max_pool])
-    outp = Dense(6, activation="sigmoid")(conc)
-
-    model = Model(inputs=inp, outputs=outp)
-    model.compile(loss='binary_crossentropy',
-                  optimizer='adam',
-                  metrics=['accuracy'])
+    model = Sequential()
+    model.add(Embedding(nb_words, embed_size, weights=[embedding_matrix], trainable=True, input_length=maxlen))
+    model.add(Conv1D(128, kernel_size=2, padding='same', activation='relu'))
+    # model.add(MaxPooling1D(pool_size=2))
+    model.add(SpatialDropout1D(0.2))
+    # model.add(Dropout(0.3))
+    # model.add(Conv1D(64, kernel_size=3, padding='same', activation='relu'))
+    # model.add(MaxPooling1D(pool_size=3))
+    # model.add(Dropout(0.35))
+    # model.add(Conv1D(128, kernel_size=3, padding='same', activation='relu'))
+    # model.add(MaxPooling1D(pool_size=3))
+    # model.add(Dropout(0.4))
+    # model.add(LSTM(150, return_sequences=True))
+    model.add(Bidirectional(GRU(90, return_sequences=True)))
+    # model.add(Dropout(0.25))
+    model.add(Flatten())
+    model.add(Dense(128, activation='relu'))
+    model.add(Dropout(0.45))
+    model.add(Dense(6, activation='sigmoid'))
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
     return model
 
 
 model = get_model()
 
-batch_size = 32
-epochs = 1
+batch_size = 1024
+epochs = 10
 
 X_tra, X_val, y_tra, y_val = train_test_split(x_train, y_train, train_size=0.95 , random_state=233)
 RocAuc = RocAucEvaluation(validation_data=(X_val, y_val), interval=1)
 
 #define callbacks
-early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.01, patience=4, verbose=1)
+early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.01, patience=1, verbose=1)
 callbacks_list = [early_stopping, RocAuc]
 
 hist = model.fit(X_tra, y_tra, batch_size=batch_size, epochs=epochs, validation_data=(X_val, y_val),
@@ -112,4 +122,4 @@ hist = model.fit(X_tra, y_tra, batch_size=batch_size, epochs=epochs, validation_
 
 y_pred = model.predict(x_test, batch_size=1024)
 submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = y_pred
-submission.to_csv(base_dir + 'gru.csv', index=False)
+submission.to_csv(base_dir + 'cnn_rnn.csv', index=False)

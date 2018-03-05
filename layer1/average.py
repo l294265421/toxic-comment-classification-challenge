@@ -3,16 +3,15 @@ import pandas as pd
 
 base_dir = base_dir + 'average\\'
 sub_files = [
-'bidirectional_lstm.csv',
- 'cnn_gru.csv',
- 'cnn_submission.csv',
- 'lr_words_and_char_ngrams.csv',
- 'pooled_gru.csv',
- 'pooled_gru_9823.csv',
- 'pooled_gru_trainable.csv',
- 'pooled_gru_trainable2(1).csv',
- 'pooled_gru_trainable2.csv',
- 'pooled_lstm_trainable.csv'
+'gru1-9829.csv',
+ 'gru2-9821.csv',
+ 'logistic1-9776.csv',
+ 'lstm1-9824.csv',
+ 'lstm2-9829.csv',
+ 'average5.csv',
+'cnn_rnn-9739.csv',
+    'gru3-9829.csv',
+    'gru4-9828.csv'
 ]
 
 sub_dfs = [pd.read_csv(base_dir + sub_file) for sub_file in sub_files]
@@ -34,4 +33,4 @@ for i in range(1, len(sub_dfs)):
 for label in labels:
     sub[label] = sub[label] / len(sub_dfs)
 
-sub.to_csv(base_dir + 'average5.csv', index=False)
+sub.to_csv(base_dir + 'average.csv', index=False)

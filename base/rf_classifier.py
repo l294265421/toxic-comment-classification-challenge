@@ -30,8 +30,8 @@ X_test = v.transform(test_df['comment_text'])
 aucs = []
 for label in ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']:
     y = train_df[label]
-    X_train, X_validation, y_train, y_validation = train_test_split(X, y, test_size=0.4, random_state=1234)
-    model = RandomForestClassifier(n_jobs=4, n_estimators=100)
+    X_train, X_validation, y_train, y_validation = train_test_split(X, y, test_size=0.05, random_state=1234)
+    model = RandomForestClassifier(n_jobs=4, n_estimators=200)
     model.fit(X_train, y_train)
     aucs.append(roc_auc_score(y_validation, model.predict_proba(X_validation)[:, 1]))
     test_df[label] = model.predict_proba(X_test)[:, 1]

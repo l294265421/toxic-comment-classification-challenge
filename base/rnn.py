@@ -80,7 +80,7 @@ class RocAucEvaluation(Callback):
 def get_model():
     inp = Input(shape=(maxlen,))
     x = Embedding(nb_words, embed_size, weights=[embedding_matrix], trainable=True)(inp)
-    # x = SpatialDropout1D(0.2)(x)
+    x = SpatialDropout1D(0.2)(x)
     x = Bidirectional(GRU(80, return_sequences=True))(x)
     avg_pool = GlobalAveragePooling1D()(x)
     max_pool = GlobalMaxPooling1D()(x)
@@ -100,7 +100,7 @@ model = get_model()
 batch_size = 32
 epochs = 1
 
-X_tra, X_val, y_tra, y_val = train_test_split(x_train, y_train, train_size=0.95 , random_state=233)
+X_tra, X_val, y_tra, y_val = train_test_split(x_train, y_train, train_size=0.95 , random_state=1234)
 RocAuc = RocAucEvaluation(validation_data=(X_val, y_val), interval=1)
 
 #define callbacks

@@ -5,13 +5,16 @@ base_dir = base_dir + 'average\\'
 sub_files = [
 'gru1-9829.csv',
  'gru2-9821.csv',
- 'logistic1-9776.csv',
+    'gru3-9829.csv',
+    'gru4-9828.csv',
+    'gru5-9819.csv',
+ # 'logistic1-9776.csv',
+    'lr_words_and_char_ngrams.csv',
  'lstm1-9824.csv',
  'lstm2-9829.csv',
  'average5.csv',
 'cnn_rnn-9739.csv',
-    'gru3-9829.csv',
-    'gru4-9828.csv'
+    'hight_of_blend_v2.csv'
 ]
 
 sub_dfs = [pd.read_csv(base_dir + sub_file) for sub_file in sub_files]

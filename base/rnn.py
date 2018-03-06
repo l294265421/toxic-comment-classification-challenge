@@ -93,23 +93,36 @@ def get_model():
                   metrics=['accuracy'])
 
     return model
-
-
 model = get_model()
 
-batch_size = 32
-epochs = 1
+from sklearn.model_selection import KFold
 
-X_tra, X_val, y_tra, y_val = train_test_split(x_train, y_train, train_size=0.95 , random_state=1234)
-RocAuc = RocAucEvaluation(validation_data=(X_val, y_val), interval=1)
+result = []
+k = 4
+kf = KFold(n_splits=k, shuffle=False)
+for train_index, test_index in kf.split(x_train):
+    X_tra = x_train[train_index]
+    y_tra = y_train[train_index]
+    X_val = x_train[test_index]
+    y_val = y_train[test_index]
 
-#define callbacks
-early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.01, patience=4, verbose=1)
-callbacks_list = [early_stopping, RocAuc]
+    batch_size = 32
+    epochs = 1
+    RocAuc = RocAucEvaluation(validation_data=(X_val, y_val), interval=1)
+    # define callbacks
+    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.01, patience=4, verbose=1)
+    callbacks_list = [early_stopping, RocAuc]
 
-hist = model.fit(X_tra, y_tra, batch_size=batch_size, epochs=epochs, validation_data=(X_val, y_val),
-                 callbacks=callbacks_list, verbose=2)
+    hist = model.fit(X_tra, y_tra, batch_size=batch_size, epochs=epochs, validation_data=(X_val, y_val),
+                     callbacks=callbacks_list, verbose=2)
 
-y_pred = model.predict(x_test, batch_size=1024)
-submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = y_pred
+    y_pred = model.predict(x_test, batch_size=1024)
+    result.append(y_pred)
+
+y_test = result[0]
+for i in range(1, k):
+    y_test += result[i]
+y_test /= k
+
+submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = y_test
 submission.to_csv(base_dir + 'gru.csv', index=False)

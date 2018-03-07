@@ -7,6 +7,7 @@ from sklearn.naive_bayes import MultinomialNB
 from nltk.stem import SnowballStemmer
 from nltk import pos_tag, word_tokenize
 from nltk.stem import WordNetLemmatizer
+from scipy.sparse import hstack
 
 english_stemmer = SnowballStemmer('english')
 
@@ -32,10 +33,32 @@ class LemmatizeTfidfVectorizer(TfidfVectorizer):
     def build_analyzer(self):
         return lambda doc: lemmatize_and_stem_all(doc)
 
-v = StemmedTfidfVectorizer(stop_words='english', ngram_range=(1, 3), max_features=15000)
+train_text = train_df['comment_text']
+test_text = test_df['comment_text']
+all_text = pd.concat([train_text, test_text])
+# 过滤掉长度小于3的词
+v = StemmedTfidfVectorizer(stop_words='english', tokenizer=word_tokenize, ngram_range=(1, 1), max_features=15000)
+v.fit(all_text)
+X1 = v.transform(train_df['comment_text'])
+X1_test = v.transform(test_df['comment_text'])
+# 加强去停用词
+v = StemmedTfidfVectorizer(stop_words='english', tokenizer=word_tokenize, ngram_range=(2, 3), max_features=5000)
+v.fit(all_text)
+X2 = v.transform(train_df['comment_text'])
+X2_test = v.transform(test_df['comment_text'])
 
-X = v.fit_transform(train_df['comment_text'])
-X_test = v.transform(test_df['comment_text'])
+char_vectorizer = TfidfVectorizer(
+    sublinear_tf=True,
+    strip_accents='unicode',
+    analyzer='char',
+    ngram_range=(1, 5),
+    max_features=15000)
+char_vectorizer.fit(all_text)
+train_char_features = char_vectorizer.transform(train_text)
+test_char_features = char_vectorizer.transform(test_text)
+
+X = hstack([X1, X2, train_char_features])
+X_test = hstack([X1_test, X2_test, test_char_features])
 
 aucs = []
 for label in ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']:

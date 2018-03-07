@@ -94,7 +94,7 @@ def get_model():
     preds = Dense(6, activation="sigmoid")(x)
     model = Model(sequence_input, preds)
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-
+    model.summary()
     return model
 
 model = get_model()

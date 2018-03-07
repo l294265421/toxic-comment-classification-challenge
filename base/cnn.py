@@ -77,22 +77,39 @@ class RocAucEvaluation(Callback):
             print("\n ROC-AUC - epoch: %d - score: %.6f \n" % (epoch + 1, score))
 
 
+from keras.layers import Dense, Dropout, Activation, Flatten, Merge
+from keras.layers import Convolution1D, MaxPooling1D
+from keras.layers import Conv1D, MaxPooling1D, Embedding
 def get_model():
     inp = Input(shape=(maxlen,))
-    x = Embedding(nb_words, embed_size, weights=[embedding_matrix], trainable=True)(inp)
-    x = SpatialDropout1D(0.2)(x)
-    x = Bidirectional(GRU(80, return_sequences=True))(x)
-    avg_pool = GlobalAveragePooling1D()(x)
-    max_pool = GlobalMaxPooling1D()(x)
-    conc = concatenate([avg_pool, max_pool])
-    outp = Dense(6, activation="sigmoid")(conc)
+    embedded_sequences = Embedding(nb_words,
+                                embed_size,
+                                weights=[embedding_matrix],
+                                trainable=True)(inp)
 
-    model = Model(inputs=inp, outputs=outp)
+    # Yoon Kim model (https://arxiv.org/abs/1408.5882)
+    convs = []
+    filter_sizes = [3, 4, 5]
+
+    for filter_size in filter_sizes:
+        l_conv = Conv1D(filters=128, kernel_size=filter_size, activation='relu')(embedded_sequences)
+        l_pool = GlobalMaxPooling1D()(l_conv)
+        convs.append(l_pool)
+
+    l_merge = concatenate(convs)
+    x = Dropout(0.5)(l_merge)
+    # Finally, we feed the output into a Sigmoid layer.
+    # The reason why sigmoid is used is because we are trying to achieve a binary classification(1,0)
+    # for each of the 6 labels, and the sigmoid function will squash the output between the bounds of 0 and 1.
+    preds = Dense(6, activation='sigmoid')(x)
+
+    model = Model(inp, preds)
     model.compile(loss='binary_crossentropy',
                   optimizer='adam',
-                  metrics=['accuracy'])
+                  metrics=['acc'])
     model.summary()
     return model
+
 model = get_model()
 
 from sklearn.model_selection import KFold
@@ -125,4 +142,4 @@ for i in range(1, k):
 y_test /= k
 
 submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = y_test
-submission.to_csv(base_dir + 'gru.csv', index=False)
+submission.to_csv(base_dir + 'cnn.csv', index=False)

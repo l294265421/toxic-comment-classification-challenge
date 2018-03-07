@@ -1,23 +1,20 @@
 from data.raw_data import *
 import pandas as pd
 
-base_dir = base_dir + 'average\\'
+average2 = base_dir + 'average2\\'
 sub_files = [
-'gru1-9829.csv',
- 'gru2-9821.csv',
-    'gru3-9829.csv',
-    'gru4-9828.csv',
-    'gru5-9819.csv',
- # 'logistic1-9776.csv',
-    'lr_words_and_char_ngrams.csv',
- 'lstm1-9824.csv',
- 'lstm2-9829.csv',
- 'average5.csv',
-'cnn_rnn-9739.csv',
-    'hight_of_blend_v2.csv'
+'average(1).csv',
+ 'average(2).csv',
+ 'average(3).csv',
+ 'average(4).csv',
+ 'average(5).csv',
+ 'average(6).csv',
+ 'average.csv',
+ 'average2.csv',
+ 'average5.csv'
 ]
 
-sub_dfs = [pd.read_csv(base_dir + sub_file) for sub_file in sub_files]
+sub_dfs = [pd.read_csv(average2 + sub_file) for sub_file in sub_files]
 
 labels = ["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]
 

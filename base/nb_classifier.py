@@ -8,51 +8,64 @@ from nltk.stem import SnowballStemmer
 from nltk import pos_tag, word_tokenize
 from nltk.stem import WordNetLemmatizer
 from scipy.sparse import hstack
+from nltk.corpus import stopwords
+
+list_stopWords=list(set(stopwords.words('english')))
+list_stopWords.append('')
 
 english_stemmer = SnowballStemmer('english')
 
 def normalize_word(word):
+    word = word.strip('\'')
     if word.isdigit():
         return 'num'
     elif len(word) > 15:
-        return 'execeptionword'
+        return 'execeptionword'.strip()
+    elif len(word) < 3:
+        return ''
     else:
         return english_stemmer.stem(word)
+
 
 class StemmedTfidfVectorizer(TfidfVectorizer):
     def build_analyzer(self):
         analyzer = super(StemmedTfidfVectorizer, self).build_analyzer()
         return lambda doc: (normalize_word(w) for w in analyzer(doc))
 
+
 def lemmatize_and_stem_all(sentence):
     wnl = WordNetLemmatizer()
     for word in word_tokenize(sentence):
         yield wnl.lemmatize(word)
 
+
 class LemmatizeTfidfVectorizer(TfidfVectorizer):
     def build_analyzer(self):
         return lambda doc: lemmatize_and_stem_all(doc)
 
-train_text = train_df['comment_text']
-test_text = test_df['comment_text']
+
+train_text = train_df['comment_text'].str.replace(r"[!\"#$%&\()*+,-./:;<=>?@[\\]^_`{|}~]", " ")
+test_text = test_df['comment_text'].str.replace(r"[!\"#$%&\()*+,-./:;<=>?@[\\]^_`{|}~]", " ")
 all_text = pd.concat([train_text, test_text])
+
 # 过滤掉长度小于3的词
-v = StemmedTfidfVectorizer(stop_words='english', tokenizer=word_tokenize, ngram_range=(1, 1), max_features=15000)
+v = StemmedTfidfVectorizer(stop_words=list_stopWords, tokenizer=word_tokenize, ngram_range=(1, 1), max_features=10000)
 v.fit(all_text)
 X1 = v.transform(train_df['comment_text'])
 X1_test = v.transform(test_df['comment_text'])
 # 加强去停用词
-v = StemmedTfidfVectorizer(stop_words='english', tokenizer=word_tokenize, ngram_range=(2, 3), max_features=5000)
+v = StemmedTfidfVectorizer(tokenizer=word_tokenize, ngram_range=(2, 3), max_features=5000)
 v.fit(all_text)
 X2 = v.transform(train_df['comment_text'])
 X2_test = v.transform(test_df['comment_text'])
 
 char_vectorizer = TfidfVectorizer(
+    lowercase=False,
     sublinear_tf=True,
     strip_accents='unicode',
     analyzer='char',
-    ngram_range=(1, 5),
-    max_features=15000)
+    ngram_range=(2, 6),
+    max_features=5000, max_df=0.5)
 char_vectorizer.fit(all_text)
 train_char_features = char_vectorizer.transform(train_text)
 test_char_features = char_vectorizer.transform(test_text)

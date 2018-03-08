@@ -7,43 +7,66 @@ from sklearn.model_selection import GridSearchCV
 from nltk.stem import SnowballStemmer
 from nltk.stem import PorterStemmer
 from nltk import pos_tag, word_tokenize
+from nltk.stem import WordNetLemmatizer
 from scipy.sparse import hstack
 from sklearn.model_selection import KFold
+from nltk.corpus import stopwords
+
+list_stopWords=list(set(stopwords.words('english')))
+list_stopWords.append('')
 
 english_stemmer = SnowballStemmer('english')
+
 def normalize_word(word):
+    word = word.strip('\'')
     if word.isdigit():
         return 'num'
     elif len(word) > 15:
-        return 'execeptionword'
+        return 'execeptionword'.strip()
+    elif len(word) < 3:
+        return ''
     else:
         return english_stemmer.stem(word)
+
 
 class StemmedTfidfVectorizer(TfidfVectorizer):
     def build_analyzer(self):
         analyzer = super(StemmedTfidfVectorizer, self).build_analyzer()
         return lambda doc: (normalize_word(w) for w in analyzer(doc))
 
-train_text = train_df['comment_text']
-test_text = test_df['comment_text']
+
+def lemmatize_and_stem_all(sentence):
+    wnl = WordNetLemmatizer()
+    for word in word_tokenize(sentence):
+        yield wnl.lemmatize(word)
+
+
+class LemmatizeTfidfVectorizer(TfidfVectorizer):
+    def build_analyzer(self):
+        return lambda doc: lemmatize_and_stem_all(doc)
+
+
+train_text = train_df['comment_text'].str.replace(r"[!\"#$%&\()*+,-./:;<=>?@[\\]^_`{|}~]", " ")
+test_text = test_df['comment_text'].str.replace(r"[!\"#$%&\()*+,-./:;<=>?@[\\]^_`{|}~]", " ")
 all_text = pd.concat([train_text, test_text])
 
-v = StemmedTfidfVectorizer(stop_words='english', tokenizer=word_tokenize, ngram_range=(1, 1), max_features=15000)
+v = StemmedTfidfVectorizer(stop_words=list_stopWords, tokenizer=word_tokenize, ngram_range=(1, 1), max_features=15000, max_df=0.5, min_df=0.00001)
 v.fit(all_text)
 X1 = v.transform(train_df['comment_text'])
 X1_test = v.transform(test_df['comment_text'])
 
-v = StemmedTfidfVectorizer(stop_words='english', tokenizer=word_tokenize, ngram_range=(2, 3), max_features=5000)
+v = StemmedTfidfVectorizer(tokenizer=word_tokenize, ngram_range=(2, 3), max_features=5000, max_df=0.5, min_df=0.00001)
 v.fit(all_text)
 X2 = v.transform(train_df['comment_text'])
 X2_test = v.transform(test_df['comment_text'])
 
 char_vectorizer = TfidfVectorizer(
+    lowercase=False,
     sublinear_tf=True,
     strip_accents='unicode',
     analyzer='char',
-    ngram_range=(1, 5),
-    max_features=15000)
+    ngram_range=(2, 5),
+    max_features=10000, max_df=0.5, min_df=0.00001)
 char_vectorizer.fit(all_text)
 train_char_features = char_vectorizer.transform(train_text)
 test_char_features = char_vectorizer.transform(test_text)
@@ -55,7 +78,7 @@ aucs = []
 for label in ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']:
     y = train_df[label]
     X_train, X_validation, y_train, y_validation = train_test_split(X, y, test_size=0.25, random_state=2345)
-    model = LogisticRegression()
+    model = LogisticRegression(random_state=1234)
     model.fit(X_train, y_train)
     aucs.append(roc_auc_score(y_validation, model.predict_proba(X_validation)[:, 1]))
     test_df[label] = model.predict_proba(X_test)[:, 1]

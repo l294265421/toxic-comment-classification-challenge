@@ -44,17 +44,16 @@ class LemmatizeTfidfVectorizer(TfidfVectorizer):
         return lambda doc: lemmatize_and_stem_all(doc)
 
 
-train_text = train_df['comment_text'].str.replace(r"[!\"#$%&\()*+,-./:;<=>?@[\\]^_`{|}~]", " ")
-test_text = test_df['comment_text'].str.replace(r"[!\"#$%&\()*+,-./:;<=>?@[\\]^_`{|}~]", " ")
+train_text = train_df['comment_text'][:5].str.replace(r"[!\"#$%&\()*+,-./:;<=>?@[\\]^_`{|}~]", " ")
+test_text = test_df['comment_text'][:5].str.replace(r"[!\"#$%&\()*+,-./:;<=>?@[\\]^_`{|}~]", " ")
 all_text = pd.concat([train_text, test_text])
 
-# 过滤掉长度小于3的词
-v = StemmedTfidfVectorizer(stop_words=list_stopWords, tokenizer=word_tokenize, ngram_range=(1, 1), max_features=10000)
+v = StemmedTfidfVectorizer(stop_words=list_stopWords, tokenizer=word_tokenize, ngram_range=(1, 1), max_features=15000, max_df=0.5, min_df=0.00001)
 v.fit(all_text)
 X1 = v.transform(train_df['comment_text'])
 X1_test = v.transform(test_df['comment_text'])
-# 加强去停用词
-v = StemmedTfidfVectorizer(tokenizer=word_tokenize, ngram_range=(2, 3), max_features=5000)
+
+v = StemmedTfidfVectorizer(tokenizer=word_tokenize, ngram_range=(2, 3), max_features=5000, max_df=0.5, min_df=0.00001)
 v.fit(all_text)
 X2 = v.transform(train_df['comment_text'])
 X2_test = v.transform(test_df['comment_text'])
@@ -64,8 +63,8 @@ char_vectorizer = TfidfVectorizer(
     sublinear_tf=True,
     strip_accents='unicode',
     analyzer='char',
-    ngram_range=(2, 6),
-    max_features=5000, max_df=0.5)
+    ngram_range=(2, 5),
+    max_features=10000, max_df=0.5, min_df=0.00001)
 char_vectorizer.fit(all_text)
 train_char_features = char_vectorizer.transform(train_text)
 test_char_features = char_vectorizer.transform(test_text)
@@ -73,16 +72,35 @@ test_char_features = char_vectorizer.transform(test_text)
 X = hstack([X1, X2, train_char_features])
 X_test = hstack([X1_test, X2_test, test_char_features])
 
-aucs = []
-for label in ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']:
-    y = train_df[label]
-    X_train, X_validation, y_train, y_validation = train_test_split(X, y, test_size=0.4, random_state=1234)
-    model = MultinomialNB()
-    model.fit(X_train, y_train)
-    aucs.append(roc_auc_score(y_validation, model.predict_proba(X_validation)[:, 1]))
-    test_df[label] = model.predict_proba(X_test)[:, 1]
-print(aucs)
-print('mean:{m}'.format(m=(sum(aucs)/len(aucs))))
+from sklearn.model_selection import KFold
 
-test_df.drop('comment_text', axis=1, inplace=True)
-test_df.to_csv(base_dir + 'nb.csv', index=False)
+result = []
+k = 4
+kf = KFold(n_splits=k, shuffle=True)
+for train_index, test_index in kf.split(X):
+    aucs = []
+    test_temp = test_df.copy()
+    for label in ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']:
+        y = train_df[label]
+        X_train = X[train_index]
+        y_train = y[train_index]
+        X_validation = X[test_index]
+        y_validation = y[test_index]
+        model = MultinomialNB()
+        model.fit(X_train, y_train)
+        y_pred = model.predict_proba(X_test)[:, 1]
+        aucs.append(roc_auc_score(y_validation, y_pred))
+        test_temp[label] = y_pred
+    test_temp.drop('id', axis=1, inplace=True)
+    test_temp.drop('comment_text', axis=1, inplace=True)
+    result.append(test_temp.values())
+    print(aucs)
+    print('mean:{m}'.format(m=(sum(aucs) / len(aucs))))
+
+y_test = result[0]
+for i in range(1, k):
+    y_test += result[i]
+y_test /= k
+
+submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = y_test
+submission.to_csv(base_dir + 'nb.csv', index=False)

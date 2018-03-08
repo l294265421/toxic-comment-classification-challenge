@@ -53,24 +53,24 @@ v.fit(all_text)
 X1 = v.transform(train_df['comment_text'])
 X1_test = v.transform(test_df['comment_text'])
 
-v = StemmedTfidfVectorizer(tokenizer=word_tokenize, ngram_range=(2, 3), max_features=5000, max_df=0.5, min_df=0.00001)
+v = StemmedTfidfVectorizer(tokenizer=word_tokenize, ngram_range=(2, 2), max_features=5000, max_df=0.5, min_df=0.00001)
 v.fit(all_text)
 X2 = v.transform(train_df['comment_text'])
 X2_test = v.transform(test_df['comment_text'])
 
-char_vectorizer = TfidfVectorizer(
-    lowercase=False,
-    sublinear_tf=True,
-    strip_accents='unicode',
-    analyzer='char',
-    ngram_range=(2, 5),
-    max_features=10000, max_df=0.5, min_df=0.00001)
-char_vectorizer.fit(all_text)
-train_char_features = char_vectorizer.transform(train_text)
-test_char_features = char_vectorizer.transform(test_text)
+# char_vectorizer = TfidfVectorizer(
+#     lowercase=False,
+#     sublinear_tf=True,
+#     strip_accents='unicode',
+#     analyzer='char',
+#     ngram_range=(2, 5),
+#     max_features=10000, max_df=0.5, min_df=0.00001)
+# char_vectorizer.fit(all_text)
+# train_char_features = char_vectorizer.transform(train_text)
+# test_char_features = char_vectorizer.transform(test_text)
 
-X = hstack([X1, X2, train_char_features])
-X_test = hstack([X1_test, X2_test, test_char_features])
+X = hstack([X1, X2])
+X_test = hstack([X1_test, X2_test])
 
 from sklearn.model_selection import KFold
 

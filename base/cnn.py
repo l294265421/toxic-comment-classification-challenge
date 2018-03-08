@@ -92,16 +92,18 @@ def get_model():
     filter_sizes = [3, 4, 5]
 
     for filter_size in filter_sizes:
-        l_conv = Conv1D(filters=128, kernel_size=filter_size, activation='relu')(embedded_sequences)
-        l_pool = GlobalMaxPooling1D()(l_conv)
-        convs.append(l_pool)
+        conv = Conv1D(filters=128, kernel_size=filter_size, activation='relu')(embedded_sequences)
+        max_pool = GlobalMaxPooling1D()(conv)
+        convs.append(max_pool)
+        avg_pool = GlobalAveragePooling1D()(conv)
+        convs.append(avg_pool)
 
     l_merge = concatenate(convs)
-    x = Dropout(0.5)(l_merge)
+    # x = Dropout(0.5)(l_merge)
     # Finally, we feed the output into a Sigmoid layer.
     # The reason why sigmoid is used is because we are trying to achieve a binary classification(1,0)
     # for each of the 6 labels, and the sigmoid function will squash the output between the bounds of 0 and 1.
-    preds = Dense(6, activation='sigmoid')(x)
+    preds = Dense(6, activation='sigmoid')(l_merge)
 
     model = Model(inp, preds)
     model.compile(loss='binary_crossentropy',
@@ -116,7 +118,7 @@ from sklearn.model_selection import KFold
 
 result = []
 k = 4
-kf = KFold(n_splits=k, shuffle=False)
+kf = KFold(n_splits=k, shuffle=True)
 for train_index, test_index in kf.split(x_train):
     X_tra = x_train[train_index]
     y_tra = y_train[train_index]

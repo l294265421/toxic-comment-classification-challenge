@@ -99,7 +99,7 @@ from sklearn.model_selection import KFold
 
 result = []
 k = 4
-kf = KFold(n_splits=k, shuffle=False)
+kf = KFold(n_splits=k, shuffle=True)
 for train_index, test_index in kf.split(x_train):
     X_tra = x_train[train_index]
     y_tra = y_train[train_index]

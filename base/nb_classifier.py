@@ -16,15 +16,16 @@ list_stopWords.append('')
 english_stemmer = SnowballStemmer('english')
 
 def normalize_word(word):
-    word = word.strip('\'')
-    if word.isdigit():
-        return 'num'
-    elif len(word) > 15:
-        return 'execeptionword'.strip()
-    elif len(word) < 3:
-        return ''
-    else:
-        return english_stemmer.stem(word)
+    return word
+    # word = word.strip('\'')
+    # if word.isdigit():
+    #     return 'num'
+    # elif len(word) > 15:
+    #     return 'execeptionword'.strip()
+    # elif len(word) < 3:
+    #     return ''
+    # else:
+    #     return english_stemmer.stem(word)
 
 
 class StemmedTfidfVectorizer(TfidfVectorizer):
@@ -69,8 +70,8 @@ X2_test = v.transform(test_df['comment_text'])
 # train_char_features = char_vectorizer.transform(train_text)
 # test_char_features = char_vectorizer.transform(test_text)
 
-X = hstack([X1, X2])
-X_test = hstack([X1_test, X2_test])
+X = hstack([X1, X2], format='csr')
+X_test = hstack([X1_test, X2_test], format='csr')
 
 from sklearn.model_selection import KFold
 
@@ -83,12 +84,13 @@ for train_index, test_index in kf.split(X):
     for label in ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']:
         y = train_df[label]
         X_train = X[train_index]
+        print('success')
         y_train = y[train_index]
         X_validation = X[test_index]
         y_validation = y[test_index]
         model = MultinomialNB()
         model.fit(X_train, y_train)
-        y_pred = model.predict_proba(X_test)[:, 1]
+        y_pred = model.predict_proba(X_validation)[:, 1]
         aucs.append(roc_auc_score(y_validation, y_pred))
         test_temp[label] = y_pred
     test_temp.drop('id', axis=1, inplace=True)

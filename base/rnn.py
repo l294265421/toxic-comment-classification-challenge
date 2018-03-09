@@ -98,8 +98,10 @@ model = get_model()
 from sklearn.model_selection import KFold
 
 result = []
+ntrain = x_train.shape[0]
+oof_train = np.zeros((ntrain, 6))
 k = 4
-kf = KFold(n_splits=k, shuffle=True)
+kf = KFold(n_splits=k, shuffle=False)
 for train_index, test_index in kf.split(x_train):
     X_tra = x_train[train_index]
     y_tra = y_train[train_index]
@@ -116,6 +118,7 @@ for train_index, test_index in kf.split(x_train):
     hist = model.fit(X_tra, y_tra, batch_size=batch_size, epochs=epochs, validation_data=(X_val, y_val),
                      callbacks=callbacks_list, verbose=2)
 
+    oof_train[test_index] = model.predict(X_val)
     y_pred = model.predict(x_test, batch_size=1024)
     result.append(y_pred)
 
@@ -123,6 +126,9 @@ y_test = result[0]
 for i in range(1, k):
     y_test += result[i]
 y_test /= k
+
+submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = oof_train
+submission.to_csv(base_dir + 'gru_train.csv', index=False)
 
 submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = y_test
 submission.to_csv(base_dir + 'gru.csv', index=False)

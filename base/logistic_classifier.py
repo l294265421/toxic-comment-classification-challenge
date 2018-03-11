@@ -11,6 +11,7 @@ from nltk.stem import WordNetLemmatizer
 from scipy.sparse import hstack
 from sklearn.model_selection import KFold
 from nltk.corpus import stopwords
+import numpy as np
 
 list_stopWords=list(set(stopwords.words('english')))
 list_stopWords.append('')
@@ -71,19 +72,46 @@ char_vectorizer.fit(all_text)
 train_char_features = char_vectorizer.transform(train_text)
 test_char_features = char_vectorizer.transform(test_text)
 
-X = hstack([X1, X2, train_char_features])
-X_test = hstack([X1_test, X2_test, test_char_features])
+X = hstack([X1, X2, train_char_features], format='csr')
+X_test = hstack([X1_test, X2_test, test_char_features], format='csr')
 
-aucs = []
-for label in ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']:
-    y = train_df[label]
-    X_train, X_validation, y_train, y_validation = train_test_split(X, y, test_size=0.25, random_state=2345)
-    model = LogisticRegression(random_state=1234)
-    model.fit(X_train, y_train)
-    aucs.append(roc_auc_score(y_validation, model.predict_proba(X_validation)[:, 1]))
-    test_df[label] = model.predict_proba(X_test)[:, 1]
-print(aucs)
-print('mean:{m}'.format(m=(sum(aucs)/len(aucs))))
+from sklearn.model_selection import KFold
 
-test_df.drop('comment_text', axis=1, inplace=True)
-test_df.to_csv(base_dir + 'logistic.csv', index=False)
+result = []
+ntrain = X.shape[0]
+oof_train = np.zeros((ntrain, 6))
+k = 4
+kf = KFold(n_splits=k, shuffle=False)
+for train_index, test_index in kf.split(X):
+    aucs = []
+    test_temp = test_df.copy()
+    oof_train_index = 0
+    for label in ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']:
+        y = train_df[label]
+        X_train = X[train_index]
+        y_train = y[train_index]
+        X_validation = X[test_index]
+        y_validation = y[test_index]
+        model = LogisticRegression(random_state=1234)
+        model.fit(X_train, y_train)
+        y_pred = model.predict_proba(X_validation)[:, 1]
+        oof_train[test_index, oof_train_index] = y_pred
+        oof_train_index += 1
+        aucs.append(roc_auc_score(y_validation, y_pred))
+        test_temp[label] = model.predict_proba(X_test)[:, 1]
+    test_temp = test_temp.drop('id', axis=1)
+    test_temp = test_temp.drop('comment_text', axis=1)
+    result.append(test_temp.values)
+    print(aucs)
+    print('mean:{m}'.format(m=(sum(aucs) / len(aucs))))
+
+y_test = result[0]
+for i in range(1, k):
+    y_test += result[i]
+y_test /= k
+
+train_df[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = oof_train
+train_df[['id', "toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]].to_csv(base_dir + 'logistic_train.csv', index=False)
+
+submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = y_test
+submission.to_csv(base_dir + 'logistic.csv', index=False)

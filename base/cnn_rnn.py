@@ -138,8 +138,8 @@ for i in range(1, k):
     y_test += result[i]
 y_test /= k
 
-submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = oof_train
-submission.to_csv(base_dir + 'cnn_rnn_train.csv', index=False)
+train_df[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = oof_train
+train_df[['id', "toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]].to_csv(base_dir + 'cnn_rnn_train.csv', index=False)
 
 submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = y_test
 submission.to_csv(base_dir + 'cnn_rnn.csv', index=False)

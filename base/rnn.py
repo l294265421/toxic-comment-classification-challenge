@@ -79,7 +79,7 @@ class RocAucEvaluation(Callback):
 
 def get_model():
     inp = Input(shape=(maxlen,))
-    x = Embedding(nb_words, embed_size, weights=[embedding_matrix], trainable=True)(inp)
+    x = Embedding(nb_words, embed_size, weights=[embedding_matrix], trainable=False)(inp)
     x = SpatialDropout1D(0.2)(x)
     x = Bidirectional(GRU(80, return_sequences=True))(x)
     avg_pool = GlobalAveragePooling1D()(x)
@@ -127,8 +127,8 @@ for i in range(1, k):
     y_test += result[i]
 y_test /= k
 
-submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = oof_train
-submission.to_csv(base_dir + 'gru_train.csv', index=False)
+train_df[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = oof_train
+train_df[['id', "toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]].to_csv(base_dir + 'gru_train.csv', index=False)
 
 submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = y_test
 submission.to_csv(base_dir + 'gru.csv', index=False)

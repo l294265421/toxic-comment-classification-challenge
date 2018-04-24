@@ -1,5 +1,5 @@
-import base.rnn
-import base.rnn_cnn
+# import base.rnn
+# import base.rnn_cnn
 import base.cnn
 import base.cnn_rnn
 

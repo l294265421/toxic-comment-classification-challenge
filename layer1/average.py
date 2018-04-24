@@ -2,7 +2,7 @@ from data.raw_data import *
 import pandas as pd
 import os
 
-average = base_dir + 'average\\'
+average = base_dir + '9870\\'
 sub_files = os.listdir(average)
 
 sub_dfs = [pd.read_csv(average + sub_file) for sub_file in sub_files]

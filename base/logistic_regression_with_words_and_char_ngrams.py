@@ -21,32 +21,13 @@ train_text = train_df['comment_text']
 test_text = test_df['comment_text']
 all_text = pd.concat([train_text, test_text])
 
-def lemmatize_all(sentence):
-    wnl = WordNetLemmatizer()
-    for word, tag in pos_tag(word_tokenize(sentence.lower())):
-        if tag.startswith("NN"):
-            yield wnl.lemmatize(word, pos='n')
-        elif tag.startswith('VB'):
-            yield wnl.lemmatize(word, pos='v')
-        elif tag.startswith('JJ'):
-            yield wnl.lemmatize(word, pos='a')
-        elif tag.startswith('R'):
-            yield wnl.lemmatize(word, pos='r')
-        else:
-            yield word
-
 english_stemmer = SnowballStemmer('english')
 class StemmedTfidfVectorizer(TfidfVectorizer):
     def build_analyzer(self):
         analyzer = super(StemmedTfidfVectorizer, self).build_analyzer()
         return lambda doc: (english_stemmer.stem(w) for w in analyzer(doc))
 
-class LemmatizeTfidfVectorizer(TfidfVectorizer):
-    def build_analyzer(self):
-        # analyzer = super(LemmatizeTfidfVectorizer, self).build_analyzer()
-        return lambda doc: (english_stemmer.stem(w) for w in lemmatize_all(doc))
-
-word_vectorizer = LemmatizeTfidfVectorizer(
+word_vectorizer = StemmedTfidfVectorizer(
     sublinear_tf=True,
     strip_accents='unicode',
     analyzer='word',
@@ -67,26 +48,46 @@ char_vectorizer.fit(all_text)
 train_char_features = char_vectorizer.transform(train_text)
 test_char_features = char_vectorizer.transform(test_text)
 
-train_features = hstack([train_char_features, train_word_features])
-test_features = hstack([test_char_features, test_word_features])
+X = hstack([train_char_features, train_word_features], format='csr')
+X_test = hstack([test_char_features, test_word_features], format='csr')
 
-losses = []
-predictions = {'id': test_df['id']}
-for class_name in class_names:
-    train_target = train_df[class_name]
-    classifier = LogisticRegression()
+from sklearn.model_selection import KFold
 
-    # cv_loss = np.mean(cross_val_score(classifier, train_features, train_target, cv=3, scoring='roc_auc'))
-    # losses.append(cv_loss)
-    # print('CV score for class {} is {}'.format(class_name, cv_loss))
+result = []
+ntrain = X.shape[0]
+oof_train = np.zeros((ntrain, 6))
+k = 4
+kf = KFold(n_splits=k, shuffle=False)
+for train_index, test_index in kf.split(X):
+    aucs = []
+    test_temp = test_df.copy()
+    oof_train_index = 0
+    for label in ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']:
+        y = train_df[label]
+        X_train = X[train_index]
+        y_train = y[train_index]
+        X_validation = X[test_index]
+        y_validation = y[test_index]
+        model = LogisticRegression(random_state=1234)
+        model.fit(X_train, y_train)
+        y_pred = model.predict_proba(X_validation)[:, 1]
+        oof_train[test_index, oof_train_index] = y_pred
+        oof_train_index += 1
+        aucs.append(roc_auc_score(y_validation, y_pred))
+        test_temp[label] = model.predict_proba(X_test)[:, 1]
+    test_temp = test_temp.drop('id', axis=1)
+    test_temp = test_temp.drop('comment_text', axis=1)
+    result.append(test_temp.values)
+    print(aucs)
+    print('mean:{m}'.format(m=(sum(aucs) / len(aucs))))
 
-    # param_grid = [{'penalty':['l1'], 'C':[1,2,3]}, {'penalty':['l2'], 'C':[1,2,3], 'solver':['newton-cg', 'lbfgs',' liblinear', 'sag']}]
-    # classifier = GridSearchCV(estimator=classifier, param_grid=param_grid, n_jobs=2, cv=3)
+y_test = result[0]
+for i in range(1, k):
+    y_test += result[i]
+y_test /= k
 
-    classifier.fit(train_features, train_target)
-    predictions[class_name] = classifier.predict_proba(test_features)[:, 1]
+train_df[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = oof_train
+train_df[['id', "toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]].to_csv(base_dir + 'logistic_train.csv', index=False)
 
-# print('Total CV score is {}'.format(np.mean(losses)))
-
-submission = pd.DataFrame.from_dict(predictions)
-submission.to_csv(base_dir + 'lr_words_and_char_ngrams.csv', index=False)
+submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = y_test
+submission.to_csv(base_dir + 'logistic.csv', index=False)

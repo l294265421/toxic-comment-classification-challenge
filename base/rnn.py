@@ -12,6 +12,7 @@ from keras.layers import GRU, LSTM, Bidirectional, GlobalAveragePooling1D, Globa
 from keras.preprocessing import text, sequence
 from keras.callbacks import Callback
 from keras.callbacks import EarlyStopping
+from keras import optimizers
 
 import warnings
 
@@ -89,8 +90,9 @@ def get_model():
     outp = Dense(6, activation="sigmoid")(conc)
 
     model = Model(inputs=inp, outputs=outp)
+    adam = optimizers.adam(clipvalue=0.5)
     model.compile(loss='binary_crossentropy',
-                  optimizer='adam',
+                  optimizer=adam,
                   metrics=['accuracy'])
     model.summary()
     return model
